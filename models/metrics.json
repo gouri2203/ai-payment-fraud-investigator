@@ -1,0 +1,74 @@
+{
+  "precision": 0.9058823529411765,
+  "recall": 0.7857142857142857,
+  "f1_score": 0.8415300546448088,
+  "pr_auc": 0.862939836265611,
+  "average_precision": 0.862939836265611,
+  "confusion_matrix": {
+    "labels": [
+      0,
+      1
+    ],
+    "matrix": [
+      [
+        56856,
+        8
+      ],
+      [
+        21,
+        77
+      ]
+    ],
+    "true_negative": 56856,
+    "false_positive": 8,
+    "false_negative": 21,
+    "true_positive": 77
+  },
+  "classification_report": "              precision    recall  f1-score   support\n\n     genuine       1.00      1.00      1.00     56864\n       fraud       0.91      0.79      0.84        98\n\n    accuracy                           1.00     56962\n   macro avg       0.95      0.89      0.92     56962\nweighted avg       1.00      1.00      1.00     56962\n",
+  "n_train": 227845,
+  "n_test": 56962,
+  "n_features": 30,
+  "feature_names": [
+    "Time",
+    "V1",
+    "V2",
+    "V3",
+    "V4",
+    "V5",
+    "V6",
+    "V7",
+    "V8",
+    "V9",
+    "V10",
+    "V11",
+    "V12",
+    "V13",
+    "V14",
+    "V15",
+    "V16",
+    "V17",
+    "V18",
+    "V19",
+    "V20",
+    "V21",
+    "V22",
+    "V23",
+    "V24",
+    "V25",
+    "V26",
+    "V27",
+    "V28",
+    "Amount"
+  ],
+  "model": {
+    "type": "RandomForestClassifier",
+    "n_estimators": 100,
+    "class_weight": "balanced",
+    "random_state": 42
+  },
+  "split": {
+    "test_size": 0.2,
+    "random_state": 42,
+    "stratify": true
+  }
+}

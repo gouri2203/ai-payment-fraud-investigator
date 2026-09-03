@@ -1,24 +1,27 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Raw heavy dataset (150MB - exceeds GitHub 100MB limit)
+data/creditcard.csv
 
-node_modules
-dist
-dist-ssr
-*.local
+# Explicitly ensure demo transactions derived file is tracked
+!data/demo_transactions.json
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Ensure trained model and metrics are tracked
+!models/fraud_model.pkl
+!models/metrics.json
+
+# Frontend dependencies and production build
+frontend/node_modules/
+frontend/dist/
+
+# Python caches and bytecode
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Environment variables & local secrets
+.env
+*.env
+
+# Local safety backup
+.git_backup/
