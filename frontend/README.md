@@ -1,16 +1,28 @@
-# React + Vite
+# AI-Powered Payment Fraud Investigator — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This is the React client for the AI-Powered Payment Fraud Investigator platform.
 
-Currently, two official plugins are available:
+For the full documentation, architecture diagram, API specifications, and machine learning model telemetry, see the [Root README](../README.md).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Quick Start
 
-## React Compiler
+```bash
+# Install dependencies
+npm install
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+# Start development server (http://localhost:5173)
+npm run dev
 
-## Expanding the Oxlint configuration
+# Run linter
+npm run lint
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+# Build production bundle
+npm run build
+```
+
+## Key Features
+
+- **Executive Dashboard**: Real-time risk volume telemetry, flagged transaction metrics, and interactive charts (Recharts).
+- **AI Investigator**: Direct integration with the FastAPI backend (`http://127.0.0.1:8000`) for loading real dataset transactions (`GET /demo-transactions`) and running live machine learning inference (`POST /predict`).
+- **Reports & Audit**: Operational compliance view with a dedicated "Download Report" button for CSV export of current case queues.
+- **Investigation Drawer**: In-depth transaction breakdown displaying live fraud probability, risk score gauge (0–100), operational recommendation, and ground truth validation.
