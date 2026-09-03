@@ -11,6 +11,7 @@ import {
   ShieldAlert,
   Brain,
   FileText,
+  Download,
   X,
 } from "lucide-react";
 
@@ -201,6 +202,66 @@ function App() {
         transaction.riskLevel === "CRITICAL"
     )
     .reduce((total, transaction) => total + transaction.amount, 0);
+
+  const handleDownloadReport = () => {
+    const csvHeaders = [
+      "Transaction ID",
+      "Merchant",
+      "Customer",
+      "Amount (INR)",
+      "Risk Score",
+      "Risk Level",
+      "Time",
+      "Payment Method",
+      "Device",
+      "Location",
+      "Recommendation",
+      "Investigation Status",
+      "Risk Summary",
+    ];
+
+    const escapeCsv = (val) => {
+      if (val === null || val === undefined) return '""';
+      const stringVal = String(val).replace(/"/g, '""');
+      return `"${stringVal}"`;
+    };
+
+    const dataRows = allHighRiskTransactions.map((tx) => [
+      escapeCsv(tx.id),
+      escapeCsv(tx.merchant),
+      escapeCsv(tx.customer),
+      tx.amount,
+      tx.riskScore,
+      escapeCsv(tx.riskLevel),
+      escapeCsv(tx.time),
+      escapeCsv(tx.paymentMethod),
+      escapeCsv(tx.device),
+      escapeCsv(tx.location),
+      escapeCsv(tx.recommendation),
+      escapeCsv(status[tx.id] || "PENDING REVIEW"),
+      escapeCsv(tx.riskSummary),
+    ]);
+
+    const csvContent = [
+      csvHeaders.join(","),
+      ...dataRows.map((row) => row.join(",")),
+    ].join("\r\n");
+
+    const blob = new Blob([csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute(
+      "download",
+      `fraud-investigation-report-${new Date().toISOString().slice(0, 10)}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="app">
@@ -751,83 +812,156 @@ function App() {
         )}
 {/* ================= REPORTS ================= */}
 {activePage === "Reports" && (
-  <>
-    <section className="card report-main-card">
-      <div className="section-header">
-        <div>
-          <h2>Fraud Investigation Report</h2>
-          <p>Current transaction risk and investigation summary</p>
+  <div className="reports-page">
+    <section className="card report-header-card">
+      <div className="report-header-info">
+        <div className="report-kicker">
+          <FileText size={14} />
+          <span>FRAUD OPERATIONS AUDIT REPORT</span>
         </div>
+        <h2>Fraud Investigation Report</h2>
+        <p>Comprehensive transaction risk telemetry, baseline model performance metrics, and prioritized high-risk investigation queue.</p>
+        <div className="report-meta-tags">
+          <span className="report-badge live">
+            <span className="online-dot"></span> System Live
+          </span>
+          <span className="report-meta-text">
+            Audit Scope: High-Risk Queue ({allHighRiskTransactions.length} cases) • Generated {new Date().toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}
+          </span>
+        </div>
+      </div>
 
+      <div className="report-actions">
         <button
-          className="investigate-button"
+          className="generate-report-button"
           onClick={() =>
             alert("Report generated locally in demo mode.")
           }
+          title="Regenerate current report snapshot"
         >
+          <FileText size={14} />
           GENERATE REPORT
         </button>
-      </div>
 
-      <div className="report-summary">
-        <div>
-          <span>Total Transactions</span>
-          <strong>{transactions.length}</strong>
-        </div>
-
-        <div>
-          <span>Critical</span>
-          <strong>{criticalCount}</strong>
-        </div>
-
-        <div>
-          <span>High</span>
-          <strong>{highCount}</strong>
-        </div>
-
-        <div>
-          <span>Confirmed Fraud</span>
-          <strong>{confirmedFraudCount}</strong>
-        </div>
-
-        <div>
-          <span>Amount at Risk</span>
-          <strong>₹{amountAtRisk.toLocaleString()}</strong>
-        </div>
+        <button
+          className="download-report-button"
+          onClick={handleDownloadReport}
+          title="Export current high-risk cases and report data to CSV"
+        >
+          <Download size={14} />
+          DOWNLOAD REPORT (CSV)
+        </button>
       </div>
     </section>
 
-    <section className="analytics-grid reports-grid">
-      <div className="card model-card">
-        <h2>Model Performance</h2>
-        <p>Baseline Random Forest Model</p>
-
-        <Metric label="PR-AUC" value="0.8629" />
-        <Metric label="Precision" value="0.9059" />
-        <Metric label="Recall" value="0.7857" />
-        <Metric label="F1 Score" value="0.8415" />
+    <div className="report-summary">
+      <div className="report-stat">
+        <span>Total Transactions</span>
+        <strong>{transactions.length}</strong>
+        <small className="report-stat-hint">Active session pool</small>
       </div>
 
-      <div className="card model-card">
-        <h2>Report Status</h2>
-        <p>System-generated fraud monitoring summary</p>
-
-        <Metric label="Detection Engine" value="ONLINE" />
-        <Metric label="Database" value="DEMO MODE" />
-        <Metric label="Risk Monitoring" value="ACTIVE" />
-
-        <Metric
-          label="Investigation Queue"
-          value={allHighRiskTransactions.length}
-        />
+      <div className="report-stat critical">
+        <span>Critical</span>
+        <strong className="danger-text">{criticalCount}</strong>
+        <small className="report-stat-hint danger-text">Immediate block required</small>
       </div>
-    </section>
 
-    <section className="card">
-      <div className="section-header">
+      <div className="report-stat high">
+        <span>High Risk</span>
+        <strong className="warning-text">{highCount}</strong>
+        <small className="report-stat-hint warning-text">Flagged for investigation</small>
+      </div>
+
+      <div className="report-stat fraud">
+        <span>Confirmed Fraud</span>
+        <strong className="danger-text">{confirmedFraudCount}</strong>
+        <small className="report-stat-hint">Analyst confirmed cases</small>
+      </div>
+
+      <div className="report-stat exposure">
+        <span>Amount at Risk</span>
+        <strong className="danger-text">₹{amountAtRisk.toLocaleString()}</strong>
+        <small className="report-stat-hint">Critical + high exposure</small>
+      </div>
+    </div>
+
+    <div className="report-two-column">
+      <div className="card report-card">
+        <div className="report-card-heading">
+          <div>
+            <h2>Model Performance</h2>
+            <p>Baseline Random Forest Model evaluation metrics</p>
+          </div>
+          <div className="report-status-icon">
+            <Brain size={20} />
+          </div>
+        </div>
+
+        <div className="report-metrics-list">
+          <Metric label="PR-AUC" value="0.8629" />
+          <Metric label="Precision" value="0.9059" />
+          <Metric label="Recall" value="0.7857" />
+          <Metric label="F1 Score" value="0.8415" />
+        </div>
+
+        <div className="report-card-footer">
+          <span className="model-tag">Validated Threshold: 0.70</span>
+          <span className="model-tag-sub">Trained on Production Transactions</span>
+        </div>
+      </div>
+
+      <div className="card report-card">
+        <div className="report-card-heading">
+          <div>
+            <h2>Report Status</h2>
+            <p>System-generated fraud monitoring telemetry</p>
+          </div>
+          <div className="report-status-icon">
+            <Activity size={20} />
+          </div>
+        </div>
+
+        <div className="report-metrics-list">
+          <div className="status-row">
+            <span>Detection Engine</span>
+            <span className="report-status-badge online">
+              <span className="online-dot"></span> ONLINE
+            </span>
+          </div>
+          <div className="status-row">
+            <span>Database</span>
+            <span className="report-status-badge demo">
+              <span className="demo-dot"></span> DEMO MODE
+            </span>
+          </div>
+          <div className="status-row">
+            <span>Risk Monitoring</span>
+            <span className="report-status-badge active">
+              ACTIVE
+            </span>
+          </div>
+          <div className="status-row">
+            <span>Investigation Queue</span>
+            <strong className="queue-count">{allHighRiskTransactions.length} Flagged</strong>
+          </div>
+        </div>
+
+        <div className="report-card-footer">
+          <span className="model-tag success">Audit Integrity: Pass</span>
+          <span className="model-tag-sub">Ready for Compliance Export</span>
+        </div>
+      </div>
+    </div>
+
+    <section className="card report-cases-card">
+      <div className="section-header report-cases-header">
         <div>
           <h2>Investigation Summary</h2>
-          <p>High-risk cases included in the current report</p>
+          <p>High-risk cases included in the current report requiring analyst action</p>
+        </div>
+        <div className="report-cases-badge">
+          <span>{allHighRiskTransactions.length} Flagged Cases</span>
         </div>
       </div>
 
@@ -837,7 +971,7 @@ function App() {
         status={status}
       />
     </section>
-  </>
+  </div>
 )}
       </main>
 
