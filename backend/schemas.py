@@ -116,6 +116,18 @@ class DecisionMetadata(BaseModel):
     dataset_feature_type: str
 
 
+class ReasonCode(BaseModel):
+    feature: str = Field(..., description="Feature name from the 30 model inputs")
+    contribution: float = Field(
+        ..., description="Change in predicted fraud probability (delta)"
+    )
+    direction: str = Field(
+        ..., description="'increases_fraud_risk' or 'decreases_fraud_risk'"
+    )
+    reason_code: str = Field(..., description="Human-readable reason code identifier")
+    description: str = Field(..., description="Fact-based summary of feature impact")
+
+
 class PredictionResponse(BaseModel):
     fraud_probability: float = Field(..., ge=0.0, le=1.0)
     risk_score: int = Field(..., ge=0, le=100)
@@ -124,8 +136,71 @@ class PredictionResponse(BaseModel):
     recommendation: Recommendation
     risk_summary: str
     decision_metadata: DecisionMetadata
+    reason_codes: list[ReasonCode] = Field(
+        default_factory=list,
+        description="Top contributing features derived from decision paths",
+    )
 
 
 class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
+
+
+class FinancialMetricCategory(BaseModel):
+    count: int = Field(..., description="Number of transactions in this category")
+    volume: float = Field(..., description="Total monetary volume of transactions")
+    average_amount: float = Field(..., description="Average amount per transaction")
+
+
+class CostAssumptions(BaseModel):
+    chargeback_fee_per_fn: float = Field(
+        ..., description="Assumed dispute/chargeback penalty per missed fraud"
+    )
+    manual_review_cost_per_fp: float = Field(
+        ..., description="Assumed operational review cost per false alarm"
+    )
+    is_assumption: bool = Field(
+        default=True,
+        description="Flag explicitly indicating values are operational assumptions",
+    )
+    disclaimer: str = Field(
+        ..., description="Notice clarifying real vs assumed figures"
+    )
+
+
+class EstimatedImpact(BaseModel):
+    direct_fraud_losses_fn: float = Field(
+        ..., description="Actual volume lost to missed fraud (FN)"
+    )
+    chargeback_penalties_fn: float = Field(
+        ..., description="Estimated network chargeback penalties (FN count * fee)"
+    )
+    total_fn_cost: float = Field(
+        ..., description="Direct fraud loss + chargeback penalties"
+    )
+    manual_review_cost_fp: float = Field(
+        ..., description="Operational review cost from false alarms (FP count * review_cost)"
+    )
+    flagged_friction_volume_fp: float = Field(
+        ..., description="Actual volume of innocent transactions flagged (FP)"
+    )
+    total_prevented_fraud_tp: float = Field(
+        ..., description="Actual fraud volume successfully blocked (TP)"
+    )
+    net_financial_protection: float = Field(
+        ..., description="Protected fraud volume minus total FN and FP costs"
+    )
+
+
+class FinancialImpactResponse(BaseModel):
+    total_test_transactions: int
+    total_test_volume: float
+    currency: str
+    true_positives: FinancialMetricCategory
+    false_positives: FinancialMetricCategory
+    false_negatives: FinancialMetricCategory
+    true_negatives: FinancialMetricCategory
+    assumptions: CostAssumptions
+    estimated_impact: EstimatedImpact
+

@@ -1,0 +1,26 @@
+{
+  "total_test_transactions": 56962,
+  "total_test_volume": 5072061.46,
+  "confusion_matrix": {
+    "true_negatives": {
+      "count": 56856,
+      "volume": 5061187.28,
+      "average_amount": 89.02
+    },
+    "false_positives": {
+      "count": 8,
+      "volume": 229.25,
+      "average_amount": 28.66
+    },
+    "false_negatives": {
+      "count": 21,
+      "volume": 4220.21,
+      "average_amount": 200.96
+    },
+    "true_positives": {
+      "count": 77,
+      "volume": 6424.72,
+      "average_amount": 83.44
+    }
+  }
+}

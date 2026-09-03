@@ -219,6 +219,73 @@ function App() {
     };
   }, [activePage, demoTransactions.length, demoLoading]);
 
+  const [financialImpact, setFinancialImpact] = useState(null);
+  const [financialLoading, setFinancialLoading] = useState(false);
+  const [financialError, setFinancialError] = useState(null);
+  const [chargebackFee, setChargebackFee] = useState(15);
+  const [manualReviewCost, setManualReviewCost] = useState(2);
+
+  const fetchFinancialImpact = async (
+    cbFee = chargebackFee,
+    mrCost = manualReviewCost
+  ) => {
+    setFinancialLoading(true);
+    setFinancialError(null);
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/financial-impact?chargeback_fee=${cbFee}&manual_review_cost=${mrCost}`
+      );
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+      const data = await res.json();
+      setFinancialImpact(data);
+    } catch (err) {
+      setFinancialError(err.message || "Failed to load financial impact data");
+    } finally {
+      setFinancialLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+    if (activePage === "Analytics" && !financialImpact && !financialLoading) {
+      // oxlint-disable-next-line react/set-state-in-effect
+      setFinancialLoading(true);
+      setFinancialError(null);
+      fetch(
+        `${API_BASE_URL}/financial-impact?chargeback_fee=${chargebackFee}&manual_review_cost=${manualReviewCost}`
+      )
+        .then((res) => {
+          if (!res.ok)
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          return res.json();
+        })
+        .then((data) => {
+          if (isMounted) setFinancialImpact(data);
+        })
+        .catch((err) => {
+          if (isMounted)
+            setFinancialError(
+              err.message || "Failed to fetch financial impact"
+            );
+        })
+        .finally(() => {
+          if (isMounted) setFinancialLoading(false);
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    activePage,
+    financialImpact,
+    financialLoading,
+    chargebackFee,
+    manualReviewCost,
+  ]);
+
+
   const scoreTransaction = async (txn) => {
     if (!txn || txn.V1 === undefined) return;
 
@@ -825,6 +892,586 @@ function App() {
                 <Metric label="F1 Score" value="0.8415" />
               </div>
             </section>
+
+            {/* ================= FINANCIAL COST IMPACT & ROI ================= */}
+            <section className="card" style={{ marginTop: "24px" }}>
+              <div
+                className="section-header"
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  flexWrap: "wrap",
+                  gap: "12px",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <h2 style={{ margin: 0 }}>
+                      Financial Cost Impact & ROI Analysis
+                    </h2>
+                    <span
+                      style={{
+                        fontSize: "11px",
+                        background: "#f1f5f9",
+                        padding: "2px 8px",
+                        borderRadius: "4px",
+                        color: "#475467",
+                        fontWeight: 600,
+                      }}
+                    >
+                      Held-Out Test Set (56,962 txns)
+                    </span>
+                  </div>
+                  <p
+                    style={{
+                      margin: "4px 0 0",
+                      color: "#64748b",
+                      fontSize: "13px",
+                    }}
+                  >
+                    Empirical transaction volumes from held-out confusion
+                    matrix outcomes with configurable operational cost
+                    assumptions.
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "10px",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontSize: "12px",
+                    }}
+                  >
+                    <label
+                      htmlFor="cbFeeInput"
+                      style={{ color: "#475467", fontWeight: 500 }}
+                    >
+                      Assumed Chargeback Fee/FN (€):
+                    </label>
+                    <input
+                      id="cbFeeInput"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={chargebackFee}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setChargebackFee(val);
+                        fetchFinancialImpact(val, manualReviewCost);
+                      }}
+                      style={{
+                        width: "65px",
+                        padding: "4px 8px",
+                        borderRadius: "4px",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "12px",
+                      }}
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      fontSize: "12px",
+                    }}
+                  >
+                    <label
+                      htmlFor="mrCostInput"
+                      style={{ color: "#475467", fontWeight: 500 }}
+                    >
+                      Assumed Review Cost/FP (€):
+                    </label>
+                    <input
+                      id="mrCostInput"
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={manualReviewCost}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setManualReviewCost(val);
+                        fetchFinancialImpact(chargebackFee, val);
+                      }}
+                      style={{
+                        width: "65px",
+                        padding: "4px 8px",
+                        borderRadius: "4px",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "12px",
+                      }}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    className="investigate-button"
+                    onClick={() =>
+                      fetchFinancialImpact(chargebackFee, manualReviewCost)
+                    }
+                    disabled={financialLoading}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "6px 12px",
+                    }}
+                  >
+                    <RefreshCw size={12} />
+                    {financialLoading ? "RECALCULATING..." : "RECALCULATE"}
+                  </button>
+                </div>
+              </div>
+
+              {financialLoading && (
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "30px",
+                    color: "#64748b",
+                  }}
+                >
+                  Loading financial risk telemetry from API...
+                </div>
+              )}
+
+              {financialError && (
+                <div
+                  style={{
+                    padding: "16px",
+                    background: "#fee2e2",
+                    border: "1px solid #fecaca",
+                    borderRadius: "8px",
+                    margin: "16px 0",
+                    color: "#b91c1c",
+                    fontSize: "13px",
+                  }}
+                >
+                  Error loading financial metrics: {financialError}
+                </div>
+              )}
+
+              {financialImpact && !financialLoading && (
+                <>
+                  {/* Financial Summary KPIs */}
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fit, minmax(200px, 1fr))",
+                      gap: "16px",
+                      margin: "18px 0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: "#f0fdf4",
+                        border: "1px solid #bbf7d0",
+                        padding: "16px",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          color: "#166534",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Protected Fraud Volume (TP)
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "22px",
+                          fontWeight: 700,
+                          color: "#15803d",
+                          marginTop: "4px",
+                        }}
+                      >
+                        €
+                        {financialImpact.true_positives.volume.toLocaleString(
+                          undefined,
+                          { minimumFractionDigits: 2 }
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          color: "#166534",
+                          marginTop: "4px",
+                        }}
+                      >
+                        {financialImpact.true_positives.count} confirmed fraud
+                        attacks blocked
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        background: "#fef2f2",
+                        border: "1px solid #fecaca",
+                        padding: "16px",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          color: "#991b1b",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Direct Fraud Losses (FN)
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "22px",
+                          fontWeight: 700,
+                          color: "#b91c1c",
+                          marginTop: "4px",
+                        }}
+                      >
+                        €
+                        {financialImpact.false_negatives.volume.toLocaleString(
+                          undefined,
+                          { minimumFractionDigits: 2 }
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          color: "#991b1b",
+                          marginTop: "4px",
+                        }}
+                      >
+                        {financialImpact.false_negatives.count} missed fraud
+                        events (chargebacks)
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        background: "#fffbeb",
+                        border: "1px solid #fde68a",
+                        padding: "16px",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          color: "#92400e",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        False Positive Friction (FP)
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "22px",
+                          fontWeight: 700,
+                          color: "#b45309",
+                          marginTop: "4px",
+                        }}
+                      >
+                        €
+                        {financialImpact.false_positives.volume.toLocaleString(
+                          undefined,
+                          { minimumFractionDigits: 2 }
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          color: "#92400e",
+                          marginTop: "4px",
+                        }}
+                      >
+                        {financialImpact.false_positives.count} innocent
+                        transactions flagged
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        background: "#eff6ff",
+                        border: "1px solid #bfdbfe",
+                        padding: "16px",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          color: "#1e40af",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Net Financial Protection (ROI)
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "22px",
+                          fontWeight: 700,
+                          color: "#1d4ed8",
+                          marginTop: "4px",
+                        }}
+                      >
+                        +€
+                        {financialImpact.estimated_impact.net_financial_protection.toLocaleString(
+                          undefined,
+                          { minimumFractionDigits: 2 }
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          color: "#1e40af",
+                          marginTop: "4px",
+                        }}
+                      >
+                        Net savings after fraud loss & review cost
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Detailed Cost Breakdown Table */}
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Outcome Category</th>
+                          <th>Transaction Count</th>
+                          <th>Empirical Volume</th>
+                          <th>Average Amount</th>
+                          <th>Operational Cost / Financial Impact</th>
+                          <th>Classification</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>
+                            <strong style={{ color: "#15803d" }}>
+                              True Positives (Blocked Fraud)
+                            </strong>
+                          </td>
+                          <td>{financialImpact.true_positives.count}</td>
+                          <td>
+                            <strong>
+                              €
+                              {financialImpact.true_positives.volume.toLocaleString(
+                                undefined,
+                                { minimumFractionDigits: 2 }
+                              )}
+                            </strong>
+                          </td>
+                          <td>
+                            €
+                            {financialImpact.true_positives.average_amount.toFixed(
+                              2
+                            )}
+                          </td>
+                          <td style={{ color: "#15803d" }}>
+                            <strong>
+                              +€
+                              {financialImpact.estimated_impact.total_prevented_fraud_tp.toLocaleString(
+                                undefined,
+                                { minimumFractionDigits: 2 }
+                              )}{" "}
+                              (Saved)
+                            </strong>
+                          </td>
+                          <td>
+                            <span
+                              className="risk-badge low"
+                              style={{ fontSize: "10px" }}
+                            >
+                              Value Protected
+                            </span>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>
+                            <strong style={{ color: "#b91c1c" }}>
+                              False Negatives (Missed Fraud)
+                            </strong>
+                          </td>
+                          <td>{financialImpact.false_negatives.count}</td>
+                          <td>
+                            <strong>
+                              €
+                              {financialImpact.false_negatives.volume.toLocaleString(
+                                undefined,
+                                { minimumFractionDigits: 2 }
+                              )}
+                            </strong>
+                          </td>
+                          <td>
+                            €
+                            {financialImpact.false_negatives.average_amount.toFixed(
+                              2
+                            )}
+                          </td>
+                          <td style={{ color: "#b91c1c" }}>
+                            -€
+                            {financialImpact.estimated_impact.total_fn_cost.toLocaleString(
+                              undefined,
+                              { minimumFractionDigits: 2 }
+                            )}
+                            <small
+                              style={{
+                                display: "block",
+                                fontSize: "10px",
+                                color: "#64748b",
+                              }}
+                            >
+                              (€{financialImpact.false_negatives.volume} loss +
+                              €
+                              {
+                                financialImpact.estimated_impact
+                                  .chargeback_penalties_fn
+                              }{" "}
+                              penalty)
+                            </small>
+                          </td>
+                          <td>
+                            <span
+                              className="risk-badge critical"
+                              style={{ fontSize: "10px" }}
+                            >
+                              Direct Loss
+                            </span>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>
+                            <strong style={{ color: "#b45309" }}>
+                              False Positives (False Alarms)
+                            </strong>
+                          </td>
+                          <td>{financialImpact.false_positives.count}</td>
+                          <td>
+                            <strong>
+                              €
+                              {financialImpact.false_positives.volume.toLocaleString(
+                                undefined,
+                                { minimumFractionDigits: 2 }
+                              )}
+                            </strong>
+                          </td>
+                          <td>
+                            €
+                            {financialImpact.false_positives.average_amount.toFixed(
+                              2
+                            )}
+                          </td>
+                          <td style={{ color: "#b45309" }}>
+                            -€
+                            {financialImpact.estimated_impact.manual_review_cost_fp.toFixed(
+                              2
+                            )}
+                            <small
+                              style={{
+                                display: "block",
+                                fontSize: "10px",
+                                color: "#64748b",
+                              }}
+                            >
+                              ({financialImpact.false_positives.count} reviews ×
+                              €
+                              {
+                                financialImpact.assumptions
+                                  .manual_review_cost_per_fp
+                              }
+                              )
+                            </small>
+                          </td>
+                          <td>
+                            <span
+                              className="risk-badge medium"
+                              style={{ fontSize: "10px" }}
+                            >
+                              Review Overhead
+                            </span>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>
+                            <strong style={{ color: "#475467" }}>
+                              True Negatives (Legitimate Cleared)
+                            </strong>
+                          </td>
+                          <td>
+                            {financialImpact.true_negatives.count.toLocaleString()}
+                          </td>
+                          <td>
+                            €
+                            {financialImpact.true_negatives.volume.toLocaleString(
+                              undefined,
+                              { minimumFractionDigits: 2 }
+                            )}
+                          </td>
+                          <td>
+                            €
+                            {financialImpact.true_negatives.average_amount.toFixed(
+                              2
+                            )}
+                          </td>
+                          <td style={{ color: "#475467" }}>
+                            €0.00 (Frictionless)
+                          </td>
+                          <td>
+                            <span
+                              className="risk-badge low"
+                              style={{ fontSize: "10px" }}
+                            >
+                              Standard Volume
+                            </span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Disclaimer Note */}
+                  <div
+                    style={{
+                      marginTop: "12px",
+                      padding: "10px 14px",
+                      background: "#f8fafc",
+                      borderRadius: "6px",
+                      border: "1px solid #e2e8f0",
+                      fontSize: "11.5px",
+                      color: "#64748b",
+                    }}
+                  >
+                    <strong>Methodology Notice:</strong>{" "}
+                    {financialImpact.assumptions.disclaimer}
+                  </div>
+                </>
+              )}
+            </section>
           </>
         )}
 
@@ -1391,6 +2038,93 @@ function App() {
                         </div>
                       </div>
                     )}
+
+                    {activePred &&
+                      activePred.reason_codes &&
+                      activePred.reason_codes.length > 0 && (
+                        <div style={{ marginTop: "14px" }}>
+                          <h4
+                            style={{
+                              fontSize: "12px",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.5px",
+                              color: "#475467",
+                              marginBottom: "8px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <span>Key Decision Drivers (Tree Attribution)</span>
+                            <span
+                              style={{
+                                fontSize: "10px",
+                                color: "#98a2b3",
+                                textTransform: "none",
+                              }}
+                            >
+                              Top {activePred.reason_codes.length} features
+                            </span>
+                          </h4>
+
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "8px",
+                            }}
+                          >
+                            {activePred.reason_codes.map((rc) => {
+                              const isRisk =
+                                rc.direction === "increases_fraud_risk";
+                              return (
+                                <div
+                                  key={rc.feature}
+                                  style={{
+                                    padding: "8px 10px",
+                                    borderRadius: "6px",
+                                    border: `1px solid ${
+                                      isRisk ? "#fecaca" : "#bbf7d0"
+                                    }`,
+                                    background: isRisk ? "#fff5f5" : "#f0fdf4",
+                                    fontSize: "11px",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      marginBottom: "3px",
+                                    }}
+                                  >
+                                    <strong>
+                                      {rc.feature}: <code>{rc.reason_code}</code>
+                                    </strong>
+                                    <span
+                                      style={{
+                                        fontWeight: "bold",
+                                        color: isRisk ? "#b91c1c" : "#15803d",
+                                      }}
+                                    >
+                                      {isRisk ? "▲ +" : "▼ "}
+                                      {(rc.contribution * 100).toFixed(2)}%
+                                    </span>
+                                  </div>
+                                  <div
+                                    style={{
+                                      color: "#475467",
+                                      fontSize: "10.5px",
+                                    }}
+                                  >
+                                    {rc.description}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                   </div>
                 </>
               );
